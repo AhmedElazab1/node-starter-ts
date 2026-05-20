@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "target": "es2023",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "sourceMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "removeComments": true,
+    "typeRoots": ["./node_modules/@types"]
+  },
+  "ts-node": {
+    "files": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}
