@@ -1,38 +1,35 @@
 import 'dotenv/config';
-import env from './config/env';
-import app from './app';
 import http from 'http';
-// import connectDB from './config/mongodb';
+import { testPostgresConnection, prisma } from './config/prisma';
+import app from './app';
+import env from './config/env';
 import logger from './common/utils/logger';
-// import mongoose from 'mongoose';
-// import { startTokenCleanupJob, stopTokenCleanupJob } from './jobs/token-cleanup.job';
+import { startTokenCleanupJob, stopTokenCleanupJob } from './jobs/token-cleanup.jobs';
 
-const PORT = env.PORT || 8000;
+const PORT = env.PORT;
 let server: http.Server | null = null;
 
-// Handles unexpected synchronous errors that were not caught anywhere
-process.on('uncaughtException', (err: Error) => {
-  logger.error('UNCAUGHT EXCEPTION: SHUTTING DOWN SERVER', err);
+process.on('uncaughtException', (err) => {
+  logger.error('UNCAUGHT EXCEPTION! Shutting down...', { error: err });
   process.exit(1);
 });
 
 const startServer = async () => {
   try {
-    // Connect to DB
-    // await connectDB();
+    await testPostgresConnection();
+
+    startTokenCleanupJob();
+
     server = app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
     });
 
-    // startTokenCleanupJob();
-
-    // Handles rejected Promises that were not handled with catch/try-catch
-    process.on('unhandledRejection', (err: Error) => {
-      logger.error('UNHANDLED REJECTION: SHUTTING DOWN SERVER', err);
+    process.on('unhandledRejection', (err: unknown) => {
+      logger.error('UNHANDLED REJECTION! Shutting down...', { error: err });
       if (server) {
         server.close(async () => {
-          // await mongoose.disconnect();
-          // stopTokenCleanupJob();
+          stopTokenCleanupJob();
+          await prisma.$disconnect().catch(() => undefined);
           process.exit(1);
         });
       } else {
@@ -40,13 +37,12 @@ const startServer = async () => {
       }
     });
 
-    // Handles graceful shutdown
-    const gracefulShutdown = () => {
-      logger.info('Shutting down gracefully...');
+    const gracefulShutdown = (signal: string) => {
+      logger.info(`${signal} received. Shutting down gracefully...`);
       if (server) {
         server.close(async () => {
-          // await mongoose.disconnect();
-          // stopTokenCleanupJob();
+          stopTokenCleanupJob();
+          await prisma.$disconnect().catch(() => undefined);
           process.exit(0);
         });
       } else {
@@ -56,8 +52,8 @@ const startServer = async () => {
 
     process.on('SIGINT', gracefulShutdown);
     process.on('SIGTERM', gracefulShutdown);
-  } catch (error) {
-    logger.error('Failed to start server:', error);
+  } catch (err) {
+    logger.error('Failed to startup', { error: err });
     process.exit(1);
   }
 };

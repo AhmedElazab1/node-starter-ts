@@ -1,9 +1,21 @@
-import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../../generated/client/client';
+import env from './env';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
+const connectionString = `${env.DATABASE_URL}`;
+
+const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
-export default prisma;
+export const testPostgresConnection = async () => {
+  try {
+    await prisma.$connect();
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('Prisma connected successfully to the database');
+  } catch (err) {
+    console.error('Prisma connection to the database failed: ', err);
+    throw err;
+  }
+};
+
+export { prisma };
